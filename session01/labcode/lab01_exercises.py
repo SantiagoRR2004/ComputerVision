@@ -133,14 +133,24 @@ class Lab1Exercises:
             """
             Apply 3x3 transformation matrix to image
 
-            TODO: Implement using cv2.warpPerspective
+            Implement using cv2.warpPerspective
             Hints:
             - Use cv2.warpPerspective for homogeneous transformations
             - Maintain original image size unless specified otherwise
             - Handle both grayscale and color images
             """
-            # TODO: Your implementation here
-            pass
+            # Get image dimensions
+            height, width = img.shape[:2]
+
+            # Apply the transformation using cv2.warpPerspective
+            # This function applies a perspective transform to the entire image
+            transformed_img = cv2.warpPerspective(
+                img,
+                transform_matrix,
+                (width, height),
+            )
+
+            return transformed_img
 
         def create_similarity_transform(
             scale: float, rotation: float, translation: Tuple[float, float]
@@ -148,19 +158,32 @@ class Lab1Exercises:
             """
             Create similarity transformation matrix
 
-            TODO: Implement using the equations from lecture
+            Implement using the equations from lecture
             Matrix form:
-            [s*cos(θ)  -s*sin(θ)   tx]
-            [s*sin(θ)   s*cos(θ)   ty]
-            [   0          0        1]
+                [s*cos(θ)  -s*sin(θ)   tx]
+                [s*sin(θ)   s*cos(θ)   ty]
+                [   0          0        1]
 
             Args:
                 scale: Scaling factor
                 rotation: Rotation angle in radians
                 translation: Translation (tx, ty)
             """
-            # TODO: Your implementation here
-            pass
+            tx, ty = translation
+            cos_theta = np.cos(rotation)
+            sin_theta = np.sin(rotation)
+
+            # Create similarity transformation matrix
+            transform_matrix = np.array(
+                [
+                    [scale * cos_theta, -scale * sin_theta, tx],
+                    [scale * sin_theta, scale * cos_theta, ty],
+                    [0, 0, 1],
+                ],
+                dtype=np.float32,
+            )
+
+            return transform_matrix
 
         def create_affine_transform(
             scale: Tuple[float, float],
@@ -171,11 +194,36 @@ class Lab1Exercises:
             """
             Create affine transformation matrix
 
-            TODO: Implement general affine transformation
+            Implement general affine transformation
             Include scaling, rotation, translation, and optional shear
             """
-            # TODO: Your implementation here
-            pass
+            sx, sy = scale
+            tx, ty = translation
+            cos_theta = np.cos(rotation)
+            sin_theta = np.sin(rotation)
+
+            # Create rotation matrix with scaling
+            rotation_scale = np.array(
+                [[sx * cos_theta, -sx * sin_theta], [sy * sin_theta, sy * cos_theta]]
+            )
+
+            # Add shear component (horizontal shear)
+            shear_matrix = np.array([[1, shear], [0, 1]])
+
+            # Combine rotation-scale with shear
+            combined_matrix = rotation_scale @ shear_matrix
+
+            # Create full affine transformation matrix
+            transform_matrix = np.array(
+                [
+                    [combined_matrix[0, 0], combined_matrix[0, 1], tx],
+                    [combined_matrix[1, 0], combined_matrix[1, 1], ty],
+                    [0, 0, 1],
+                ],
+                dtype=np.float32,
+            )
+
+            return transform_matrix
 
         def create_projective_transform(
             src_points: np.ndarray, dst_points: np.ndarray
@@ -183,10 +231,11 @@ class Lab1Exercises:
             """
             Create projective transformation from 4 point correspondences
 
-            TODO: Use cv2.getPerspectiveTransform or implement DLT
             """
-            # TODO: Your implementation here
-            pass
+            # Use OpenCV's getPerspectiveTransform to compute the homography
+            transform_matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+
+            return transform_matrix
 
         # Test your transformations
         test_img = np.zeros((200, 200, 3), dtype=np.uint8)
@@ -215,10 +264,25 @@ class Lab1Exercises:
         Q4: What happens to parallel lines under each transformation type?
         
         Write your answers here:
-        A1: 
-        A2: 
-        A3: 
-        A4: 
+        A1: Similarity transformations preserve angles and shape proportions, allowing only 
+            uniform scaling, rotation, and translation (4 parameters). Affine transformations 
+            can include non-uniform scaling and shearing, which can change angles but preserve 
+            parallel lines (6 parameters). Similarity is a subset of affine transformations.
+            
+        A2: Projective transformations are needed when dealing with perspective effects, such as 
+            viewing a planar surface from different viewpoints (e.g., document rectification, 
+            architectural photography correction). Simpler transformations (similarity/affine) 
+            are sufficient when the camera is orthogonal to the surface or when perspective 
+            effects are negligible.
+            
+        A3: - Similarity: 4 parameters (scale, rotation angle, tx, ty)
+            - Affine: 6 parameters (2 scales, rotation, shear, tx, ty)
+            - Projective: 8 parameters (3x3 matrix with 9 elements, but scale invariant, so 8 DOF)
+            
+        A4: - Similarity: Parallel lines remain parallel, angles are preserved
+            - Affine: Parallel lines remain parallel, but angles may change
+            - Projective: Parallel lines may converge (perspective effect), angles and 
+              parallelism are not preserved
         """
 
     # ================================
@@ -771,7 +835,7 @@ def run_all_exercises():
 
     # Uncomment as you complete each exercise
     exercises.exercise_1_1_tensor_operations()
-    # exercises.exercise_1_2_transformations()
+    exercises.exercise_1_2_transformations()
     # exercises.exercise_1_3_corner_analysis()
     # exercises.exercise_1_4_calibration_analysis()
     # exercises.exercise_1_5_homography_robustness()
