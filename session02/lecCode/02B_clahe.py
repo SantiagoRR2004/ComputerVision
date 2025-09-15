@@ -57,7 +57,9 @@ def imread_gray_bgr(path: Path):
     return gray, bgr
 
 
-def fig_side_by_side_color(original_bgr, clahe_bgr, title_left="Original", title_right="LAB-CLAHE"):
+def fig_side_by_side_color(
+    original_bgr, clahe_bgr, title_left="Original", title_right="LAB-CLAHE"
+):
     """Return a Matplotlib figure comparing color images side by side."""
     fig = plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
@@ -73,7 +75,9 @@ def fig_side_by_side_color(original_bgr, clahe_bgr, title_left="Original", title
     return fig
 
 
-def fig_gray_comparison(gray, he, clahe, title="Grayscale: Original vs Global HE vs CLAHE"):
+def fig_gray_comparison(
+    gray, he, clahe, title="Grayscale: Original vs Global HE vs CLAHE"
+):
     """Return a Matplotlib figure showing grayscale original, global HE, and CLAHE."""
     fig = plt.figure(figsize=(15, 4.5))
     plt.subplot(1, 3, 1)
@@ -116,7 +120,14 @@ def histogram_panel_gray(gray, he, clahe):
     return fig
 
 
-def process_image(image_path: Path, clip: float, grid: tuple[int, int], save: bool, show_hist: bool, outdir: Path | None):
+def process_image(
+    image_path: Path,
+    clip: float,
+    grid: tuple[int, int],
+    save: bool,
+    show_hist: bool,
+    outdir: Path | None,
+):
     gray, bgr = imread_gray_bgr(image_path)
 
     he_gray = apply_global_hist_eq_gray(gray)
@@ -124,11 +135,18 @@ def process_image(image_path: Path, clip: float, grid: tuple[int, int], save: bo
     clahe_bgr = apply_clahe_lab(bgr, clip=clip, grid=grid)
 
     # Build figures
-    fig1 = fig_gray_comparison(gray, he_gray, clahe_gray,
-                               title=f"Grayscale Comparison (clip={clip}, grid={grid})")
-    fig2 = fig_side_by_side_color(bgr, clahe_bgr,
-                                  title_left="Original (BGR→RGB)",
-                                  title_right=f"LAB-CLAHE (clip={clip}, grid={grid})")
+    fig1 = fig_gray_comparison(
+        gray,
+        he_gray,
+        clahe_gray,
+        title=f"Grayscale Comparison (clip={clip}, grid={grid})",
+    )
+    fig2 = fig_side_by_side_color(
+        bgr,
+        clahe_bgr,
+        title_left="Original (BGR→RGB)",
+        title_right=f"LAB-CLAHE (clip={clip}, grid={grid})",
+    )
 
     if show_hist:
         fig3 = histogram_panel_gray(gray, he_gray, clahe_gray)
@@ -144,14 +162,26 @@ def process_image(image_path: Path, clip: float, grid: tuple[int, int], save: bo
         # Save processed images
         cv2.imwrite(str(outdir / f"{stem}_gray.png"), gray)
         cv2.imwrite(str(outdir / f"{stem}_he_gray.png"), he_gray)
-        cv2.imwrite(str(outdir / f"{stem}_clahe_gray_clip{clip}_grid{grid[0]}x{grid[1]}.png"), clahe_gray)
-        cv2.imwrite(str(outdir / f"{stem}_clahe_color_clip{clip}_grid{grid[0]}x{grid[1]}.png"), clahe_bgr)
+        cv2.imwrite(
+            str(outdir / f"{stem}_clahe_gray_clip{clip}_grid{grid[0]}x{grid[1]}.png"),
+            clahe_gray,
+        )
+        cv2.imwrite(
+            str(outdir / f"{stem}_clahe_color_clip{clip}_grid{grid[0]}x{grid[1]}.png"),
+            clahe_bgr,
+        )
 
         # Save figures (RGB space via matplotlib)
-        fig1.savefig(outdir / f"{stem}_gray_comparison.png", dpi=200, bbox_inches="tight")
-        fig2.savefig(outdir / f"{stem}_color_comparison.png", dpi=200, bbox_inches="tight")
+        fig1.savefig(
+            outdir / f"{stem}_gray_comparison.png", dpi=200, bbox_inches="tight"
+        )
+        fig2.savefig(
+            outdir / f"{stem}_color_comparison.png", dpi=200, bbox_inches="tight"
+        )
         if fig3 is not None:
-            fig3.savefig(outdir / f"{stem}_histograms.png", dpi=200, bbox_inches="tight")
+            fig3.savefig(
+                outdir / f"{stem}_histograms.png", dpi=200, bbox_inches="tight"
+            )
 
         print(f"[Saved] Outputs to: {outdir.resolve()}")
 
@@ -160,14 +190,33 @@ def process_image(image_path: Path, clip: float, grid: tuple[int, int], save: bo
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="CLAHE demo (OpenCV): grayscale & LAB color")
+    p = argparse.ArgumentParser(
+        description="CLAHE demo (OpenCV): grayscale & LAB color"
+    )
     p.add_argument("--image", type=Path, required=True, help="Path to input image")
-    p.add_argument("--clip", type=float, default=2.0, help="CLAHE clipLimit (typical 2–3)")
-    p.add_argument("--grid", type=int, nargs=2, default=[8, 8], metavar=("TILES_X", "TILES_Y"),
-                   help="CLAHE tileGridSize (e.g., 8 8 or 16 16)")
-    p.add_argument("--save", action="store_true", help="Save processed images and figures")
-    p.add_argument("--hist", action="store_true", help="Also draw histogram comparison panel")
-    p.add_argument("--outdir", type=Path, default=None, help="Custom output directory (used with --save)")
+    p.add_argument(
+        "--clip", type=float, default=2.0, help="CLAHE clipLimit (typical 2–3)"
+    )
+    p.add_argument(
+        "--grid",
+        type=int,
+        nargs=2,
+        default=[8, 8],
+        metavar=("TILES_X", "TILES_Y"),
+        help="CLAHE tileGridSize (e.g., 8 8 or 16 16)",
+    )
+    p.add_argument(
+        "--save", action="store_true", help="Save processed images and figures"
+    )
+    p.add_argument(
+        "--hist", action="store_true", help="Also draw histogram comparison panel"
+    )
+    p.add_argument(
+        "--outdir",
+        type=Path,
+        default=None,
+        help="Custom output directory (used with --save)",
+    )
     return p.parse_args()
 
 
@@ -176,7 +225,14 @@ def main():
     if not args.image.exists():
         raise FileNotFoundError(f"Image not found: {args.image}")
     grid = (int(args.grid[0]), int(args.grid[1]))
-    process_image(args.image, clip=args.clip, grid=grid, save=args.save, show_hist=args.hist, outdir=args.outdir)
+    process_image(
+        args.image,
+        clip=args.clip,
+        grid=grid,
+        save=args.save,
+        show_hist=args.hist,
+        outdir=args.outdir,
+    )
 
 
 if __name__ == "__main__":

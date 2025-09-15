@@ -30,6 +30,7 @@ import time
 import cv2
 import numpy as np
 
+
 # ---------- Helpers ----------
 def load_cascade(name: str) -> cv2.CascadeClassifier:
     # Common cascade names (from cv2.data.haarcascades)
@@ -46,23 +47,29 @@ def load_cascade(name: str) -> cv2.CascadeClassifier:
         raise FileNotFoundError(f"Could not load cascade: {path}")
     return clf
 
+
 def to_gray(img_bgr, equalize=False):
     g = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     return cv2.equalizeHist(g) if equalize else g
 
-def draw_boxes(img, boxes, color=(0,255,0), thickness=2):
+
+def draw_boxes(img, boxes, color=(0, 255, 0), thickness=2):
     out = img.copy()
-    for (x,y,w,h) in boxes:
-        cv2.rectangle(out, (x,y), (x+w,y+h), color, thickness, cv2.LINE_AA)
+    for x, y, w, h in boxes:
+        cv2.rectangle(out, (x, y), (x + w, y + h), color, thickness, cv2.LINE_AA)
     return out
+
 
 def nms(boxes, scores, iou_thresh=0.3):
     if len(boxes) == 0:
         return []
     boxes = np.array(boxes)
     scores = np.array(scores if scores is not None else np.ones(len(boxes)))
-    x1 = boxes[:,0]; y1 = boxes[:,1]; x2 = boxes[:,0]+boxes[:,2]; y2 = boxes[:,1]+boxes[:,3]
-    areas = (x2-x1+1)*(y2-y1+1)
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 0] + boxes[:, 2]
+    y2 = boxes[:, 1] + boxes[:, 3]
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
     order = scores.argsort()[::-1]
     keep = []
     while order.size > 0:
@@ -72,22 +79,24 @@ def nms(boxes, scores, iou_thresh=0.3):
         yy1 = np.maximum(y1[i], y1[order[1:]])
         xx2 = np.minimum(x2[i], x2[order[1:]])
         yy2 = np.minimum(y2[i], y2[order[1:]])
-        w = np.maximum(0, xx2-xx1+1)
-        h = np.maximum(0, yy2-yy1+1)
-        inter = w*h
-        ovr = inter/(areas[i]+areas[order[1:]]-inter+1e-9)
+        w = np.maximum(0, xx2 - xx1 + 1)
+        h = np.maximum(0, yy2 - yy1 + 1)
+        inter = w * h
+        ovr = inter / (areas[i] + areas[order[1:]] - inter + 1e-9)
         inds = np.where(ovr <= iou_thresh)[0]
-        order = order[inds+1]
+        order = order[inds + 1]
     return boxes[keep].tolist(), scores[keep].tolist()
+
 
 def color_by_score(score, smin, smax):
     """Map score to color (blue->green->red)."""
-    t = 0.0 if smax==smin else (score - smin) / (smax - smin + 1e-9)
+    t = 0.0 if smax == smin else (score - smin) / (smax - smin + 1e-9)
     # simple jet-ish: B->G->R
-    r = int(255 * max(0, min(1, 2*t - 0.0)))
-    g = int(255 * (1 - abs(2*t - 1)))
-    b = int(255 * max(0, min(1, 2*(1-t))))
-    return (b,g,r)
+    r = int(255 * max(0, min(1, 2 * t - 0.0)))
+    g = int(255 * (1 - abs(2 * t - 1)))
+    b = int(255 * max(0, min(1, 2 * (1 - t))))
+    return (b, g, r)
+
 
 # ---------- Detection ----------
 def detect_on_frame(frame_bgr, clf, args):
@@ -101,27 +110,46 @@ def detect_on_frame(frame_bgr, clf, args):
                 scaleFactor=args.scale,
                 minNeighbors=args.neighbors,
                 minSize=(args.minsize[0], args.minsize[1]),
-                outputRejectLevels=True
+                outputRejectLevels=True,
             )
-            dt = (time.time() - t0)*1000
+            dt = (time.time() - t0) * 1000
             rects = rects if rects is not None else []
-            rejectLevels = rejectLevels.flatten().tolist() if len(rects)>0 else []
-            levelWeights = levelWeights.flatten().tolist() if len(rects)>0 else []
+            rejectLevels = rejectLevels.flatten().tolist() if len(rects) > 0 else []
+            levelWeights = levelWeights.flatten().tolist() if len(rects) > 0 else []
             # Optional NMS on rects with weights as scores
-            if args.nms and len(rects)>0:
+            if args.nms and len(rects) > 0:
                 rects, levelWeights = nms(rects, levelWeights, iou_thresh=0.3)
             # Draw with colors by weight (higher=warmer)
             out = frame_bgr.copy()
-            if len(rects)>0:
+            if len(rects) > 0:
                 smin, smax = min(levelWeights), max(levelWeights)
-                for (box, wgt, rj) in zip(rects, levelWeights, rejectLevels[:len(rects)]):
+                for box, wgt, rj in zip(
+                    rects, levelWeights, rejectLevels[: len(rects)]
+                ):
                     color = color_by_score(wgt, smin, smax)
-                    x,y,w,h = box
-                    cv2.rectangle(out, (x,y), (x+w,y+h), color, 2, cv2.LINE_AA)
-                    cv2.putText(out, f"{wgt:.2f} | stg~{rj}", (x, y-6),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+                    x, y, w, h = box
+                    cv2.rectangle(out, (x, y), (x + w, y + h), color, 2, cv2.LINE_AA)
+                    cv2.putText(
+                        out,
+                        f"{wgt:.2f} | stg~{rj}",
+                        (x, y - 6),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.45,
+                        color,
+                        1,
+                        cv2.LINE_AA,
+                    )
             info = f"{len(rects)} faces | {dt:.1f} ms"
-            cv2.putText(out, info, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (30,220,30), 2, cv2.LINE_AA)
+            cv2.putText(
+                out,
+                info,
+                (8, 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (30, 220, 30),
+                2,
+                cv2.LINE_AA,
+            )
             return out, rects, dt
         except Exception as e:
             # Fallback to classic API if 3-API unsupported in user install
@@ -132,16 +160,25 @@ def detect_on_frame(frame_bgr, clf, args):
         gray,
         scaleFactor=args.scale,
         minNeighbors=args.neighbors,
-        minSize=(args.minsize[0], args.minsize[1])
+        minSize=(args.minsize[0], args.minsize[1]),
     )
-    dt = (time.time() - t0)*1000
+    dt = (time.time() - t0) * 1000
     rects = rects if rects is not None else []
-    if args.nms and len(rects)>0:
+    if args.nms and len(rects) > 0:
         rects, _ = nms(rects, None, iou_thresh=0.3)
-    out = draw_boxes(frame_bgr, rects, (0,255,0), 2)
-    cv2.putText(out, f"{len(rects)} faces | {dt:.1f} ms", (8, 20),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (30,220,30), 2, cv2.LINE_AA)
+    out = draw_boxes(frame_bgr, rects, (0, 255, 0), 2)
+    cv2.putText(
+        out,
+        f"{len(rects)} faces | {dt:.1f} ms",
+        (8, 20),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (30, 220, 30),
+        2,
+        cv2.LINE_AA,
+    )
     return out, rects, dt
+
 
 # ---------- CLI ----------
 def parse_args():
@@ -150,18 +187,42 @@ def parse_args():
     src.add_argument("--input", type=str, help="Path to image or video")
     src.add_argument("--webcam", type=int, help="Webcam index (e.g., 0)")
 
-    ap.add_argument("--cascade", type=str, default="frontal",
-                    help="Cascade alias or filename (frontal|frontal_alt2|profile|eye|*.xml)")
-    ap.add_argument("--scale", type=float, default=1.1, help="Image pyramid scale factor (>1.0)")
+    ap.add_argument(
+        "--cascade",
+        type=str,
+        default="frontal",
+        help="Cascade alias or filename (frontal|frontal_alt2|profile|eye|*.xml)",
+    )
+    ap.add_argument(
+        "--scale", type=float, default=1.1, help="Image pyramid scale factor (>1.0)"
+    )
     ap.add_argument("--neighbors", type=int, default=3, help="minNeighbors (grouping)")
-    ap.add_argument("--minsize", type=int, nargs=2, default=[24,24], metavar=("W","H"),
-                    help="Minimum window size")
-    ap.add_argument("--equalize", action="store_true", help="Histogram equalization on grayscale")
-    ap.add_argument("--stages", action="store_true", help="Show reject levels / weights (detectMultiScale3)")
+    ap.add_argument(
+        "--minsize",
+        type=int,
+        nargs=2,
+        default=[24, 24],
+        metavar=("W", "H"),
+        help="Minimum window size",
+    )
+    ap.add_argument(
+        "--equalize", action="store_true", help="Histogram equalization on grayscale"
+    )
+    ap.add_argument(
+        "--stages",
+        action="store_true",
+        help="Show reject levels / weights (detectMultiScale3)",
+    )
     ap.add_argument("--nms", action="store_true", help="Apply simple NMS to detections")
     ap.add_argument("--save", action="store_true", help="Save annotated output")
-    ap.add_argument("--out", type=str, default="vj_output.png", help="Save path (image) or output video")
+    ap.add_argument(
+        "--out",
+        type=str,
+        default="vj_output.png",
+        help="Save path (image) or output video",
+    )
     return ap.parse_args()
+
 
 def main():
     args = parse_args()
@@ -172,7 +233,7 @@ def main():
         cap = cv2.VideoCapture(args.webcam)
         if not cap.isOpened():
             raise SystemExit("Could not open webcam")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v') if args.save else None
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v") if args.save else None
         writer = None
         while True:
             ok, frame = cap.read()
@@ -185,10 +246,11 @@ def main():
                     h, w = out.shape[:2]
                     writer = cv2.VideoWriter(args.out, fourcc, 25, (w, h))
                 writer.write(out)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
         cap.release()
-        if writer is not None: writer.release()
+        if writer is not None:
+            writer.release()
         cv2.destroyAllWindows()
         return
 
@@ -210,23 +272,28 @@ def main():
         cv2.destroyAllWindows()
     else:
         # Video
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v') if args.save else None
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v") if args.save else None
         writer = None
         while True:
             ok, frame = cap.read()
-            if not ok: break
+            if not ok:
+                break
             out, rects, dt = detect_on_frame(frame, clf, args)
             cv2.imshow("Viola–Jones (Haar) — press q to quit", out)
             if args.save:
                 if writer is None:
                     h, w = out.shape[:2]
-                    writer = cv2.VideoWriter(args.out, fourcc, cap.get(cv2.CAP_PROP_FPS) or 25, (w, h))
+                    writer = cv2.VideoWriter(
+                        args.out, fourcc, cap.get(cv2.CAP_PROP_FPS) or 25, (w, h)
+                    )
                 writer.write(out)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
         cap.release()
-        if writer is not None: writer.release()
+        if writer is not None:
+            writer.release()
         cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

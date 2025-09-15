@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 
 # ---------- Core helpers ----------
 
+
 def to_gray(img_bgr: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
@@ -85,7 +86,10 @@ def histeq_lab_color(bgr: np.ndarray, method: str = "cv") -> np.ndarray:
 
 # ---------- Visualization ----------
 
-def fig_gray_triplet(gray, basic, cvstyle, title="Global Histogram Equalization (Gray)"):
+
+def fig_gray_triplet(
+    gray, basic, cvstyle, title="Global Histogram Equalization (Gray)"
+):
     fig = plt.figure(figsize=(14, 4.5))
     plt.subplot(1, 3, 1)
     plt.imshow(gray, cmap="gray", vmin=0, vmax=255)
@@ -125,7 +129,9 @@ def fig_color_pair(bgr, bgr_eq, title_right="LAB L-channel HE"):
 
 def fig_histograms(gray, basic, cvstyle):
     fig = plt.figure(figsize=(13, 4))
-    for idx, (name, im) in enumerate([("Original", gray), ("Basic HE", basic), ("OpenCV-style", cvstyle)], start=1):
+    for idx, (name, im) in enumerate(
+        [("Original", gray), ("Basic HE", basic), ("OpenCV-style", cvstyle)], start=1
+    ):
         plt.subplot(1, 3, idx)
         plt.hist(im.ravel(), bins=256, range=(0, 255))
         plt.title(f"{name} Histogram")
@@ -135,14 +141,29 @@ def fig_histograms(gray, basic, cvstyle):
 
 # ---------- CLI / Main ----------
 
+
 def parse_args():
-    p = argparse.ArgumentParser(description="Global Histogram Equalization demo (basic & OpenCV-style)")
+    p = argparse.ArgumentParser(
+        description="Global Histogram Equalization demo (basic & OpenCV-style)"
+    )
     p.add_argument("--image", type=Path, required=True, help="Path to input image")
-    p.add_argument("--method", choices=["basic", "cv"], default="cv",
-                   help="Which mapping to highlight for color demo (gray shows both)")
-    p.add_argument("--save", action="store_true", help="Save processed images and figures")
-    p.add_argument("--check", action="store_true", help="Compare cv-style result to cv2.equalizeHist")
-    p.add_argument("--outdir", type=Path, default=None, help="Directory to save outputs")
+    p.add_argument(
+        "--method",
+        choices=["basic", "cv"],
+        default="cv",
+        help="Which mapping to highlight for color demo (gray shows both)",
+    )
+    p.add_argument(
+        "--save", action="store_true", help="Save processed images and figures"
+    )
+    p.add_argument(
+        "--check",
+        action="store_true",
+        help="Compare cv-style result to cv2.equalizeHist",
+    )
+    p.add_argument(
+        "--outdir", type=Path, default=None, help="Directory to save outputs"
+    )
     return p.parse_args()
 
 
@@ -156,7 +177,7 @@ def main():
 
     # Process (grayscale)
     gray_basic = histeq_basic(gray)
-    gray_cv    = histeq_cvstyle(gray)
+    gray_cv = histeq_cvstyle(gray)
 
     # Optional check vs OpenCV
     if args.check:
@@ -172,10 +193,17 @@ def main():
     bgr_eq = histeq_lab_color(img_bgr, method=args.method)
 
     # Make figures
-    fig1 = fig_gray_triplet(gray, gray_basic, gray_cv,
-                            title="Grayscale: Original vs Basic HE vs OpenCV-style HE")
-    fig2 = fig_color_pair(img_bgr, bgr_eq,
-                          title_right=f"LAB L-channel HE ({'Basic' if args.method=='basic' else 'OpenCV-style'})")
+    fig1 = fig_gray_triplet(
+        gray,
+        gray_basic,
+        gray_cv,
+        title="Grayscale: Original vs Basic HE vs OpenCV-style HE",
+    )
+    fig2 = fig_color_pair(
+        img_bgr,
+        bgr_eq,
+        title_right=f"LAB L-channel HE ({'Basic' if args.method=='basic' else 'OpenCV-style'})",
+    )
     fig3 = fig_histograms(gray, gray_basic, gray_cv)
 
     # Save if requested
@@ -192,8 +220,8 @@ def main():
 
         # figures
         fig1.savefig(outdir / f"{stem}_gray_triplet.png", dpi=200, bbox_inches="tight")
-        fig2.savefig(outdir / f"{stem}_color_pair.png",   dpi=200, bbox_inches="tight")
-        fig3.savefig(outdir / f"{stem}_histograms.png",   dpi=200, bbox_inches="tight")
+        fig2.savefig(outdir / f"{stem}_color_pair.png", dpi=200, bbox_inches="tight")
+        fig3.savefig(outdir / f"{stem}_histograms.png", dpi=200, bbox_inches="tight")
 
         print(f"[Saved] Outputs → {outdir.resolve()}")
 

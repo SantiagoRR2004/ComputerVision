@@ -1,8 +1,9 @@
 import cv2, numpy as np, os
-#os.makedirs("imgs", exist_ok=True)
+
+# os.makedirs("imgs", exist_ok=True)
 
 # --- Read & prep ---
-img_path = "imgs/input_low_contrast.jpg"    
+img_path = "imgs/input_low_contrast.jpg"
 bgr = cv2.imread(img_path)
 assert bgr is not None, "Could not read input image"
 gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -11,7 +12,7 @@ gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 he = cv2.equalizeHist(gray)
 
 # --- CLAHE (adaptive, grayscale) ---
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 clahe_gray = clahe.apply(gray)
 
 # --- Grid: original vs HE vs CLAHE (grayscale) ---
