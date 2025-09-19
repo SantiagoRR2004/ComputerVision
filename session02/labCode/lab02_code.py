@@ -25,6 +25,7 @@ import torch.nn.functional as F
 from scipy import signal
 from skimage import morphology
 import time
+import os
 from typing import Tuple, Optional
 import warnings
 
@@ -115,7 +116,13 @@ class SamplingAnalysis:
             Dictionary containing original, aliased, and anti-aliased results
         """
         # Create high-resolution grating
-        original = self.create_sine_grating((512, 512), frequency)
+        filePath = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "lecCode",
+            "input.jpg",
+        )
+
+        original = cv2.imread(filePath)
 
         # Implement naive downsampling (aliased)
         # Simply take every downsample_factor-th pixel
@@ -892,17 +899,13 @@ def visualize_all_results():
     )
     # Visualize results
     plt.figure(figsize=(12, 4))
-    plt.subplot(1, 3, 1)
-    plt.title("Original Grating")
-    plt.imshow(aliasing_results["original"], cmap="gray")
-    plt.axis("off")
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, 2, 1)
     plt.title("Aliased (Naive Downsample)")
-    plt.imshow(aliasing_results["aliased"], cmap="gray")
+    plt.imshow(cv2.cvtColor(aliasing_results["aliased"], cv2.COLOR_BGR2RGB))
     plt.axis("off")
-    plt.subplot(1, 3, 3)
+    plt.subplot(1, 2, 2)
     plt.title("Anti-Aliased (Gaussian + Downsample)")
-    plt.imshow(aliasing_results["anti_aliased"], cmap="gray")
+    plt.imshow(cv2.cvtColor(aliasing_results["anti_aliased"], cv2.COLOR_BGR2RGB))
     plt.axis("off")
 
     # - Color space conversion comparisons
@@ -913,9 +916,6 @@ def visualize_all_results():
     # - Morphological operation effects
     # - CNN filter visualizations
 
-    fig, axes = plt.subplots(4, 4, figsize=(16, 16))
-    # Your visualization implementation here
-    plt.tight_layout()
     plt.show()
 
 
