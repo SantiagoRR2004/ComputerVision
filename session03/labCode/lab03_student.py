@@ -56,9 +56,13 @@ class BasicBlock(nn.Module):
         # - BatchNorm (no ReLU here)
         # - Store downsample for skip connection
 
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride)
-        self.bn1 = nn.ReLU(nn.BatchNorm2d(out_channels))
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(
+            in_channels, out_channels, kernel_size=3, stride=stride, padding=1
+        )
+        self.bn1 = nn.Sequential(nn.BatchNorm2d(out_channels), nn.ReLU())
+        self.conv2 = nn.Conv2d(
+            out_channels, out_channels, kernel_size=3, stride=1, padding=1
+        )
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.downsample = downsample
 
@@ -110,11 +114,11 @@ class BottleneckBlock(nn.Module):
         # - BatchNorm + ReLU after each conv (except last)
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
-        self.bn1 = nn.ReLU(nn.BatchNorm2d(out_channels))
+        self.bn1 = nn.Sequential(nn.BatchNorm2d(out_channels), nn.ReLU())
         self.conv2 = nn.Conv2d(
             out_channels, out_channels, kernel_size=3, stride=stride, padding=1
         )
-        self.bn2 = nn.ReLU(nn.BatchNorm2d(out_channels))
+        self.bn2 = nn.Sequential(nn.BatchNorm2d(out_channels), nn.ReLU())
         self.conv3 = nn.Conv2d(
             out_channels, out_channels * self.expansion, kernel_size=1, stride=1
         )
@@ -151,76 +155,99 @@ class ResNet(nn.Module):
     """
 
     def __init__(
-        self, block, layers: List[int], num_classes: int = 10, input_channels: int = 3
+        self,
+        block: nn.Module,
+        layers: List[int],
+        num_classes: int = 10,
+        input_channels: int = 3,
     ):
         super(ResNet, self).__init__()
 
         self.in_channels = 64
 
-        # TODO: Implement initial layers
+        # Implement initial layers
         # Hint: Start with 7x7 conv, bn, relu, maxpool for ImageNet
         # For CIFAR: use 3x3 conv, bn, relu (no maxpool)
 
-        self.conv1 = None  # TODO: Initial convolution
-        self.bn1 = None  # TODO: BatchNorm
-        self.maxpool = None  # TODO: MaxPool (for ImageNet) or None (for CIFAR)
+        self.conv1 = nn.Conv2d(
+            input_channels, self.in_channels, kernel_size=7, stride=2, padding=3
+        )
+        self.bn1 = nn.ReLU(nn.BatchNorm2d(self.in_channels))
+        self.maxpool = nn.MaxPool2d(
+            kernel_size=3, stride=2, padding=1
+        )  # MaxPool (for ImageNet) or None (for CIFAR)
 
-        # TODO: Implement residual layers
+        # Implement residual layers
         # Hint: Use _make_layer helper function
-        self.layer1 = None  # TODO: First residual layer
-        self.layer2 = None  # TODO: Second residual layer
-        self.layer3 = None  # TODO: Third residual layer
-        self.layer4 = None  # TODO: Fourth residual layer
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
-        # TODO: Final layers
-        self.avgpool = None  # TODO: Global average pooling
-        self.fc = None  # TODO: Final classification layer
+        # Final layers
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
 
     def _make_layer(
-        self, block, out_channels: int, blocks: int, stride: int = 1
+        self, block: nn.Module, out_channels: int, blocks: int, stride: int = 1
     ) -> nn.Sequential:
         """
         Create a residual layer with multiple blocks
         """
         downsample = None
 
-        # TODO: Create downsample layer if needed
+        # Create downsample layer if needed
         # Hint: Need downsample when stride != 1 or channels change
         if stride != 1 or self.in_channels != out_channels * block.expansion:
-            downsample = None  # TODO: Implement downsample
+            downsample = nn.Sequential(
+                nn.Conv2d(
+                    self.in_channels,
+                    out_channels * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                ),
+                nn.BatchNorm2d(out_channels * block.expansion),
+            )
 
         layers = []
-        # TODO: Add first block with potential downsample
-        layers.append(None)  # TODO: First block
+        # Add first block with potential downsample
+        layers.append(block(self.in_channels, out_channels, stride, downsample))
 
-        # TODO: Update in_channels for subsequent blocks
-        self.in_channels = None
+        # Update in_channels for subsequent blocks
+        self.in_channels = out_channels * block.expansion
 
-        # TODO: Add remaining blocks
+        # Add remaining blocks
         for _ in range(1, blocks):
-            layers.append(None)  # TODO: Additional blocks
+            layers.append(block(self.in_channels, out_channels))
 
         return nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # TODO: Implement forward pass through entire network
+        # Implement forward pass through entire network
 
-        # TODO: Initial layers
-        x = None
+        # Initial layers
+        x = self.bn1(self.conv1(x))
+        if self.maxpool is not None:
+            x = self.maxpool(x)
 
-        # TODO: Residual layers
-        x = None
+        # Residual layers
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
 
-        # TODO: Final layers
-        x = None
+        # Final layers
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
 
         return x
 
 
 def resnet18(num_classes: int = 10) -> ResNet:
     """Create ResNet-18"""
-    # TODO: Return ResNet with BasicBlock and [2, 2, 2, 2] layers
-    return None
+    # Return ResNet with BasicBlock and [2, 2, 2, 2] layers
+    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
 
 
 def resnet34(num_classes: int = 10) -> ResNet:
