@@ -39,7 +39,7 @@ class DoubleConv(nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        # TODO Task 1.1: Implement double convolution block
+        # Task 1.1: Implement double convolution block
         # Hint: Conv2d -> BatchNorm2d -> ReLU -> Conv2d -> BatchNorm2d -> ReLU
         # Use kernel_size=3, padding=1 to maintain spatial dimensions
         self.double_conv = nn.Sequential(
@@ -60,13 +60,13 @@ class EncoderBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        # TODO Task 1.1: Initialize layers
+        # Task 1.1: Initialize layers
         # You need: DoubleConv and MaxPool2d
         self.conv = DoubleConv(in_channels, out_channels)
         self.pool = nn.MaxPool2d(kernel_size=2)
 
     def forward(self, x):
-        # TODO Task 1.1: Implement forward pass
+        # Task 1.1: Implement forward pass
         # Return both: features before pooling (for skip connection) and after pooling
         features = self.conv(x)
         pooled = self.pool(features)
@@ -146,7 +146,7 @@ class UNet(nn.Module):
         self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
 
     def forward(self, x):
-        # TODO Task 1.4: Connect everything together
+        # Task 1.4: Connect everything together
         skip_connections = []
 
         # Encoder path
@@ -243,14 +243,22 @@ class DiceLoss(nn.Module):
         self.smooth = smooth
 
     def forward(self, pred, target):
-        # TODO Task 3.1: Implement Dice loss
+        # Task 3.1: Implement Dice loss
         # 1. Apply sigmoid to predictions
-        # 2. Flatten both pred and target
-        # 3. Compute intersection and union
-        # 4. Calculate Dice coefficient
-        # 5. Return 1 - dice
+        pred = torch.sigmoid(pred)
 
-        dice = None  # TODO
+        # 2. Flatten both pred and target
+        pred_flat = pred.view(-1)
+        target_flat = target.view(-1)
+
+        # 3. Compute intersection and union
+        intersection = (pred_flat * target_flat).sum()
+        union = pred_flat.sum() + target_flat.sum()
+
+        # 4. Calculate Dice coefficient
+        dice = (2.0 * intersection + self.smooth) / (union + self.smooth)
+
+        # 5. Return 1 - dice
         return 1 - dice
 
 
@@ -261,15 +269,22 @@ class FocalLoss(nn.Module):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
+        self.ce = nn.CrossEntropyLoss(reduction="none")
 
     def forward(self, pred, target):
-        # TODO Task 3.2: Implement Focal loss
+        # Task 3.2: Implement Focal loss
         # 1. Apply sigmoid and compute BCE
-        # 2. Calculate p_t (probability of correct class)
-        # 3. Apply focal term: (1-p_t)^gamma
-        # 4. Apply alpha weighting
+        pred = torch.sigmoid(pred)
+        bce = self.ce(pred, target)
 
-        loss = None  # TODO
+        # 2. Calculate p_t (probability of correct class)
+        p_t = torch.exp(-bce)
+
+        # 3. Apply focal term: (1-p_t)^gamma
+        focalTerm = (1 - p_t) ** self.gamma
+
+        # 4. Apply alpha weighting
+        loss = self.alpha * focalTerm * bce
         return loss
 
 
@@ -307,7 +322,7 @@ def calculate_iou(pred, target, threshold=0.5):
     return iou
 
 
-def train_epoch(model, dataloader, optimizer, criterion, device):
+def train_epoch(model, dataloader, optimizer, criterion: nn.Module, device):
     """Train for one epoch"""
     model.train()
     total_loss = 0
@@ -417,8 +432,7 @@ def main():
 
     # Setup optimizer and loss
     optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
-    # criterion = DiceLoss() #TODO Complete it and use this DiceLoss.
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = DiceLoss()
 
     # Training loop
     train_losses = []
@@ -434,6 +448,7 @@ def main():
             model, trainLoader, optimizer, criterion, device
         )
         val_loss, val_iou = validate(model, valLoader, criterion, device)
+
         # Save metrics
         train_losses.append(train_loss)
         val_losses.append(val_loss)
