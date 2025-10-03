@@ -397,7 +397,7 @@ def main():
     }
 
     # Setup data transforms
-    transform = transforms.Compose(
+    imageTransform = transforms.Compose(
         [
             # Add necessary transforms
             # Resize, ToTensor, Normalize
@@ -406,13 +406,21 @@ def main():
             transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         ]
     )
+    targetTransform = transforms.Compose(
+        [
+            transforms.Resize((config["image_size"], config["image_size"])),
+            transforms.ToTensor(),
+        ]
+    )
 
     # Load dataset
     # Use OxfordIIITPet or a simple synthetic dataset for testing
     dataset = OxfordIIITPet(
         root=os.path.join(currentDirectory, "images"),
         download=True,
-        transform=transform,
+        target_types="segmentation",
+        transform=imageTransform,
+        target_transform=targetTransform,
     )
 
     trainSize = int(0.8 * len(dataset))
